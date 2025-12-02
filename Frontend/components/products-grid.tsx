@@ -17,9 +17,22 @@ export default function ProductsGrid({ products }: ProductsGridProps) {
   // SOLO usar los productos recibidos por props - NO usar mocks
   const displayProducts = products;
 
-  const handleProductClick = (productId: string) => {
-    console.log('🖱️ Clic en producto ID:', productId);
-    router.push(`/product?id=${productId}`)
+  const handleProductClick = (product: Product) => {
+    console.log('🖱️ Clic en producto:', product);
+    
+    // Guardar el producto completo en localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`product_${product.id}`, JSON.stringify(product));
+      localStorage.setItem(`product_${product.id}_name`, product.name);
+      
+      // También guardar como producto actual para acceso rápido
+      localStorage.setItem('current_product', JSON.stringify(product));
+      
+      console.log('💾 Producto guardado en localStorage:', product.id);
+    }
+    
+    // Navegar a la página de detalles del producto
+    router.push(`/product/${product.id}`);
   }
 
   return (
@@ -46,7 +59,7 @@ export default function ProductsGrid({ products }: ProductsGridProps) {
           {displayProducts.map((product) => (
             <div
               key={product.id}
-              onClick={() => handleProductClick(product.id)}
+              onClick={() => handleProductClick(product)}
               className="group cursor-pointer h-full"
             >
               <div className="bg-card border border-border rounded-lg overflow-hidden hover:border-primary hover:shadow-lg transition-all duration-300 ease-out h-full flex flex-col">
@@ -116,7 +129,7 @@ export default function ProductsGrid({ products }: ProductsGridProps) {
                     className="w-full transition-all duration-300 ease-out hover:shadow-md hover:scale-105"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleProductClick(product.id)
+                      handleProductClick(product)
                     }}
                   >
                     <ShoppingCart className="w-4 h-4 mr-2" />

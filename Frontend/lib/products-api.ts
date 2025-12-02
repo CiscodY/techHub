@@ -244,4 +244,97 @@ export class ProductsApi {
       return [];
     }
   }
+static async getProductById(productId: string, productName?: string): Promise<Product | null> {
+    try {
+      console.log('🔍 Buscando producto por ID:', productId);
+      
+      // Como tu API no tiene endpoint para producto por ID,
+      // hacemos una búsqueda con el nombre del producto
+      if (productName) {
+        console.log('🔎 Usando nombre del producto para búsqueda:', productName);
+        
+        // Buscar productos similares
+        const data: ProductSearchResult[] = await apiFetch(
+          `/api/search?query=${encodeURIComponent(productName)}&num=5`
+        );
+        
+        // Encontrar el producto que coincida con el ID o nombre
+        const foundProduct = data.find(item => 
+          item.productApiId === productId || 
+          item.title.toLowerCase().includes(productName.toLowerCase())
+        );
+        
+        if (foundProduct) {
+          return {
+            id: foundProduct.productApiId || productId,
+            name: foundProduct.title,
+            price: this.parsePrice(foundProduct.price),
+            rating: this.parseRating(foundProduct.rating),
+            image: foundProduct.thumbnail || '/placeholder.svg',
+            category: foundProduct.source || 'Electrónica',
+            onSale: false,
+            discount: this.calculateDiscount(foundProduct.price),
+            source: foundProduct.source,
+            link: foundProduct.link,
+            snippet: foundProduct.snippet,
+            originalPrice: this.calculateOriginalPrice(foundProduct.price),
+          };
+        }
+      }
+      
+      console.warn('⚠️ Producto no encontrado, retornando null');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo producto por ID:', error);
+      return null;
+    }
+  }
+
+  static async getStoresForProduct(productName: string): Promise<Array<{name: string, price: number, available: boolean}>> {
+    try {
+      console.log('🏪 Buscando tiendas para producto:', productName);
+      
+      const data: ProductSearchResult[] = await apiFetch(
+        `/api/search?query=${encodeURIComponent(productName)}&num=10`
+      );
+      
+      // Agrupar por tienda y obtener precios
+      const storesMap = new Map<string, {price: number, count: number}>();
+      
+      data.forEach(item => {
+        const storeName = item.source || 'Tienda Online';
+        const price = this.parsePrice(item.price);
+        
+        if (storeName && price > 0) {
+          if (!storesMap.has(storeName)) {
+            storesMap.set(storeName, { price, count: 1 });
+          } else {
+            const existing = storesMap.get(storeName)!;
+            // Tomar el precio promedio
+            const newPrice = (existing.price * existing.count + price) / (existing.count + 1);
+            storesMap.set(storeName, { price: newPrice, count: existing.count + 1 });
+          }
+        }
+      });
+      
+      // Convertir a array y ordenar por precio
+      return Array.from(storesMap.entries())
+        .map(([name, {price}]) => ({
+          name,
+          price: Math.round(price * 100) / 100,
+          available: true
+        }))
+        .sort((a, b) => a.price - b.price);
+        
+    } catch (error) {
+      console.error('❌ Error obteniendo tiendas:', error);
+      // Retornar tiendas por defecto
+      return [
+        { name: 'Amazon', price: 0, available: true },
+        { name: 'Best Buy', price: 0, available: true },
+        { name: 'Walmart', price: 0, available: true },
+      ];
+    }
+  }
 }
