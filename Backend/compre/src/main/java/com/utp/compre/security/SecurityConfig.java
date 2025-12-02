@@ -36,7 +36,8 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",       // Frontend local
-                "https://desarrollo-web-integrado-front.onrender.com" // Frontend desplegado
+                "https://desarrollo-web-integrado-front.onrender.com",
+                "https://techhub-front.onrender.com"
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

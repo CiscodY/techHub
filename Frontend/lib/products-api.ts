@@ -127,4 +127,121 @@ export class ProductsApi {
     console.log(`🏷️ Precio original calculado: ${price} * ${multiplier.toFixed(2)} = ${originalPrice}`);
     return originalPrice;
   }
+
+  static async getRandomProducts(count: number = 4): Promise<Product[]> {
+    try {
+      console.log('🎯 Obteniendo productos aleatorios');
+      
+      // Términos de búsqueda comunes para productos tecnológicos
+      const techTerms = [
+        "smartphone", "laptop", "tablet", "camera", 
+        "headphones", "smartwatch", "gaming console", "monitor",
+        "keyboard", "mouse", "printer", "router", "speaker"
+      ];
+      
+      // Elegir un término aleatorio
+      const randomTerm = techTerms[Math.floor(Math.random() * techTerms.length)];
+      console.log(`🔍 Término aleatorio seleccionado: ${randomTerm}`);
+      
+      // Buscar productos con ese término
+      const data: ProductSearchResult[] = await apiFetch(`/api/search?query=${encodeURIComponent(randomTerm)}&num=10`);
+      
+      console.log(`📦 Productos obtenidos para carrusel: ${data.length}`);
+      
+      // Si hay suficientes productos, seleccionar 4 al azar
+      if (data.length >= count) {
+        // Mezclar array y tomar los primeros 'count' elementos
+        const shuffled = [...data].sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, count);
+        
+        return selected.map((item, index) => ({
+          id: item.productApiId || `carousel-${index}`,
+          name: item.title || 'Producto sin nombre',
+          price: this.parsePrice(item.price),
+          rating: this.parseRating(item.rating),
+          image: item.thumbnail || '/placeholder.svg',
+          category: item.source || 'Electrónica',
+          onSale: Math.random() > 0.5, // 50% de probabilidad de estar en oferta
+          discount: this.calculateDiscount(item.price),
+          source: item.source,
+          link: item.link,
+          snippet: item.snippet,
+          originalPrice: this.calculateOriginalPrice(item.price),
+        }));
+      } else {
+        // Si no hay suficientes productos, usar todos los disponibles
+        return data.map((item, index) => ({
+          id: item.productApiId || `carousel-${index}`,
+          name: item.title || 'Producto sin nombre',
+          price: this.parsePrice(item.price),
+          rating: this.parseRating(item.rating),
+          image: item.thumbnail || '/placeholder.svg',
+          category: item.source || 'Electrónica',
+          onSale: Math.random() > 0.5,
+          discount: this.calculateDiscount(item.price),
+          source: item.source,
+          link: item.link,
+          snippet: item.snippet,
+          originalPrice: this.calculateOriginalPrice(item.price),
+        }));
+      }
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo productos aleatorios:', error);
+      // Retornar array vacío en caso de error
+      return [];
+    }
+  }
+  
+  // También puedes agregar un método para productos más populares si quieres
+  static async getFeaturedProducts(count: number = 4): Promise<Product[]> {
+    try {
+      console.log('⭐ Obteniendo productos destacados');
+      
+      // Buscar productos populares
+      const popularTerms = ["iphone", "samsung", "laptop", "gaming"];
+      const randomPopularTerm = popularTerms[Math.floor(Math.random() * popularTerms.length)];
+      
+      const data: ProductSearchResult[] = await apiFetch(`/api/search?query=${encodeURIComponent(randomPopularTerm)}&num=8`);
+      
+      console.log(`📊 Productos destacados obtenidos: ${data.length}`);
+      
+      // Ordenar por rating (si está disponible) y tomar los mejores
+      const sorted = [...data].sort((a, b) => {
+        const ratingA = this.parseRating(a.rating);
+        const ratingB = this.parseRating(b.rating);
+        return ratingB - ratingA; // Descendente
+      });
+      
+      const selected = sorted.slice(0, count);
+      
+      return selected.map((item, index) => {
+        const price = this.parsePrice(item.price);
+        const originalPrice = this.calculateOriginalPrice(item.price);
+        const discount = originalPrice > price ? 
+          Math.round((1 - price / originalPrice) * 100) : 
+          this.calculateDiscount(item.price);
+        
+        return {
+          id: item.productApiId || `featured-${index}`,
+          name: item.title || 'Producto sin nombre',
+          price: price,
+          rating: this.parseRating(item.rating),
+          image: item.thumbnail || '/placeholder.svg',
+          category: item.source || 'Electrónica',
+          onSale: discount > 0,
+          discount: discount,
+          source: item.source,
+          link: item.link,
+          snippet: item.snippet,
+          originalPrice: originalPrice,
+          store: item.source || 'Tienda online' // Agregamos store para el carrusel
+        };
+      });
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo productos destacados:', error);
+      return [];
+    }
+  }
 }
